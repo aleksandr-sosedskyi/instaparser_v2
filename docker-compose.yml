@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  postgres:
+    container_name: insta_postgres
+    image: postgres:latest
+    env_file: .env
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    
+  server:
+    build: server/
+    restart: always
+    working_dir: /var/www/server/
+    container_name: insta_server
+    command: python manage.py runserver ${SERVER_HOST}:${SERVER_PORT}
+    env_file: .env
+    ports:
+      - "${SERVER_PORT}:${SERVER_PORT}"
+    volumes:
+      - ./server/:/var/www/server
+    depends_on:
+      - postgres
+      - client
+
+  client:
+    image: node:latest
+    container_name: insta_client
+    working_dir: /var/www/client
+    env_file: .env
+    command: yarn start
+    ports:
+      - "${CLIENT_PORT}:${CLIENT_PORT}"
+    volumes:
+      - ./client/:/var/www/client
+
