@@ -1,3 +1,6 @@
 from django.contrib import admin
+from core.models import InstaUser, Process, Log
 
-# Register your models here.
+admin.site.register(InstaUser)
+admin.site.register(Process)
+admin.site.register(Log)

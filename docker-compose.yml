@@ -33,8 +33,38 @@ services:
     working_dir: /var/www/client
     env_file: .env
     command: yarn start
+    depends_on:
+      - postgres
+      - redis
     ports:
       - "${CLIENT_PORT}:${CLIENT_PORT}"
     volumes:
       - ./client/:/var/www/client
 
+  celery:
+    build: server/
+    working_dir: /var/www/server/
+    env_file:
+      - .env
+    volumes:
+      - ./server/:/var/www/server
+    command: celery -A instaparser worker -l info
+    container_name: insta_celery
+
+  celery_beat:
+    build: server/
+    working_dir: /var/www/server/
+    container_name: insta_celery_beat
+    env_file:
+      - .env
+    volumes:
+      - ./server/:/var/www/server
+    command: celery -A instaparser beat -l info
+  
+  redis:
+    image: redis:alpine
+    container_name: insta_redis
+    volumes:
+      - ./server/:/var/www/server
+    ports:
+      - "6379:6379"

@@ -1,6 +1,8 @@
 .env
 env/
 __pycache__/
+.vscode/
+celerybeat-schedule
 
 /node_modules
 /.pnp
