@@ -17,9 +17,9 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    'add-every-30-seconds': {
+    'parse': {
         'task': 'core.tasks.parse',
-        'schedule': 3000.0,
+        'schedule': 300.0,
         'args': ()
     },
 }

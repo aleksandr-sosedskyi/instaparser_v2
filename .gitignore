@@ -3,6 +3,7 @@ env/
 __pycache__/
 .vscode/
 celerybeat-schedule
+celerybeat.pid
 
 /node_modules
 /.pnp

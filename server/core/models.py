@@ -2,14 +2,12 @@ from django.db import models
 
 
 class InstaUser(models.Model):
-    DIDNT_CHECKED = 0
     RIGHT_EMAIL = 1
     HACKABLE = 2
     HACKED = 3
     UNHACKABLE = 4
 
     STATUS_CHOICES = (
-        (DIDNT_CHECKED, "Didn't checked"),
         (RIGHT_EMAIL, 'Right email'),
         (HACKABLE, 'Hackable'),
         (HACKED, 'Hacked'),
@@ -25,7 +23,7 @@ class InstaUser(models.Model):
     subscribers = models.PositiveIntegerField(null=True)
     subscriptions = models.PositiveIntegerField(null=True)
     city = models.CharField(max_length=200, null=True)
-    status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES, default=DIDNT_CHECKED)
+    status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Process attributes
@@ -59,7 +57,7 @@ class Process(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"({self.count}){self.user.username} - {self.created_at}"
+        return f"{self.user.username} ({self.count})"
 
     class Meta:
         verbose_name = 'Scrapping process'
@@ -78,7 +76,7 @@ class Log(models.Model):
         (CREATE_USERS, 'Creating users')
     )
 
-    task = models.ForeignKey(Process, on_delete=models.SET_NULL, null=True)
+    tid = models.IntegerField(null=True)
     message = models.TextField()
     action = models.PositiveSmallIntegerField(choices=ACTION_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -90,3 +88,27 @@ class Log(models.Model):
         verbose_name = 'Log'
         verbose_name_plural = 'Logs'
         ordering = ('-created_at', )
+
+
+class Controller(models.Model):
+    is_finished = models.BooleanField(default=True)
+    is_stopped = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Finished - {self.is_finished}; Stopped - {self.is_stopped}"
+    
+    class Meta:
+        verbose_name = "Controller"
+        verbose_name_plural = "Controllers"
+
+
+class APIKey(models.Model):
+    username = models.CharField(max_length=255)
+    api_key = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.username} | {self.api_key}"
+
+    class Meta:
+        verbose_name = "API Key"
+        verbose_name_plural = "API Keys"

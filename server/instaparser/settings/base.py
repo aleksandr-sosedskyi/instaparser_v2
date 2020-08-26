@@ -23,6 +23,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'admin_actions',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -122,9 +124,7 @@ STATIC_URL = '/static/'
 
 # Instaparser API
 API_URL = "https://parser.im/api.php"
-API_KEYS = (
-    '0bYXspZi9XKH0FY9',
-)
+
 
 CELERY_BROKER_URL = 'redis://redis:6379'
 CELERY_RESULT_BACKEND = 'redis://redis:6379'
@@ -139,3 +139,9 @@ CELERYBEAT_SCHEDULE = {
         'args': (),
     },
 }
+
+# TODO 
+# история изменений
+# параметры парса в админке
+# оптимизация
+# docker logs
