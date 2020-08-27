@@ -1,6 +1,7 @@
 import requests
 import json 
 import random 
+import traceback
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
@@ -37,27 +38,33 @@ def process_completed_task(task):
                 email = user[6]
                 if "yandex" in email or "rambler" in email:
                     status = InstaUser.RIGHT_EMAIL
-
+            if not user[1]:
+                continue
             obj, created = InstaUser.objects.get_or_create(
                 ig_id=user[0],
-                username=user[1],
-                subscribers=int(user[2]) if user[2] != "0" else None,
-                subscriptions=int(user[3]) if user[3] != "0" else None,
-                name=user[4] if user[4] != "0" else None,
-                phone=user[5] if user[5] != "0" else None,
-                email=user[6] if user[6] != "0" else None,
-                city=user[7] if user[7] != "0" else None,
-                status=status
+                defaults={
+                    'ig_id':user[0],
+                    'username':user[1],
+                    'subscribers':int(user[2]) if user[2] and user[2] != "0" else None,
+                    'subscriptions':int(user[3]) if user[3] and user[3] != "0" else None,
+                    'name':user[4] if user[4] and user[4] != "0" else None,
+                    'phone':user[5] if user[5] and user[5] != "0" else None,
+                    'email':user[6] if user[6] and user[6] != "0" else None,
+                    'city':user[7] if user[7] and user[7] != "0" else None,
+                    'status':status,
+                    'tid': task.tid
+                }
             )
             if not created:
                 username = user[1]
                 obj.subscribers = int(user[2])
                 obj.subscriptions = int(user[3])
-                obj.name = user[4] if user[4] else obj.name 
-                obj.phone = user[5] if user[5] else obj.phone 
-                obj.city = user[6] if user[6] else obj.city 
-                obj.name = user[7] if user[7] else obj.name 
-                obj.status = InstaUser.RIGHT_EMAIL if 'rambler' in obj.email or 'yandex' in obj.email else obj.status
+                obj.name = user[4] if user[4] and user[4] != "0" else obj.name 
+                obj.phone = user[5] if user[5] and user[4] != "0" else obj.phone 
+                obj.email = user[6] if user[6] and user[6] != "0" else obj.email 
+                obj.city = user[7] if user[7] and user[7] != "0" else obj.city 
+                obj.status = InstaUser.RIGHT_EMAIL if obj.email and ('rambler' in obj.email or 'yandex' in obj.email) else obj.status
+                obj.tid = task.tid
                 obj.save()
     else:
         raise InvalidResponseException(response.status_code, response.text)
@@ -102,12 +109,14 @@ def parse():
                             else:
                                 process_completed_task(task)
                         except Exception as e:
-                            Log.objects.create(tid=task.tid, action=Log.CREATE_USERS, message=e)
+                            message = traceback.format_exc()
+                            Log.objects.create(tid=task.tid, api_key=api_key, action=Log.CREATE_USERS, message=message)
                         tasks_count -= 1
                 else:
                     raise InvalidResponseException(response.status_code, response.text)
             except Exception as e:
-                Log.objects.create(message=e, tid=task.tid, action=Log.CHECK_API)
+                message = traceback.format_exc()
+                Log.objects.create(message=message, api_key=api_key, tid=task.tid, action=Log.CHECK_API)
         
         try:
             for i in range(0, 3-tasks_count):
@@ -128,6 +137,19 @@ def parse():
                     user_to_parse.save()
                     raise InvalidResponseException(response.status_code, response.text)
         except Exception as e:
-            Log.objects.create(message=e, action=Log.CREATE_TASK)
+            message = traceback.format_exc()
+            Log.objects.create(message=message, api_key=api_key, action=Log.CREATE_TASK)
     controller.is_finished = True
     controller.save()
+
+
+@shared_task
+def check_api_keys_task(pk):
+    obj = APIKey.objects.get(pk=pk)
+    response = requests.get(f"{settings.API_URL}?key={obj.api_key}&mode=delete&tid=0")
+    if response.status_code == 200 and response.json().get('text') != "invalid key":
+        obj.active = True
+        obj.save()
+    else:
+        obj.active = False
+        obj.save()

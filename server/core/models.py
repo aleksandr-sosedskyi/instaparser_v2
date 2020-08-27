@@ -1,4 +1,7 @@
 from django.db import models
+from django.utils import timezone
+
+from core.utils import format_date_from_seconds
 
 
 class InstaUser(models.Model):
@@ -17,14 +20,16 @@ class InstaUser(models.Model):
     # General
     ig_id = models.CharField(primary_key=True, max_length=50)
     username = models.CharField(max_length=55)
-    name = models.CharField(max_length=100, null=True)
-    email = models.EmailField(max_length=100, null=True)
-    phone = models.CharField(max_length=20, null=True)
+    name = models.CharField(max_length=255, null=True)
+    email = models.CharField(max_length=255, null=True)
+    phone = models.CharField(max_length=255, null=True)
     subscribers = models.PositiveIntegerField(null=True)
     subscriptions = models.PositiveIntegerField(null=True)
-    city = models.CharField(max_length=200, null=True)
+    city = models.CharField(max_length=255, null=True)
     status = models.PositiveSmallIntegerField(choices=STATUS_CHOICES)
+    updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    tid = models.CharField(max_length=20)
 
     # Process attributes
     is_processed = models.BooleanField(default=False)
@@ -38,6 +43,10 @@ class InstaUser(models.Model):
             is_scrapping=False,
             is_invalid_process=False
         )
+
+    def formated_update_date(self):
+        total_seconds = round((timezone.now() - self.updated_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
 
     def __str__(self):
         return self.username
@@ -59,6 +68,14 @@ class Process(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.count})"
 
+    def formated_update_date(self):
+        total_seconds = round((timezone.now() - self.updated_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+
+    def formated_create_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+
     class Meta:
         verbose_name = 'Scrapping process'
         verbose_name_plural = 'Scrapping processes'
@@ -77,13 +94,18 @@ class Log(models.Model):
     )
 
     tid = models.IntegerField(null=True)
+    api_key = models.CharField(max_length=100)
     message = models.TextField()
     action = models.PositiveSmallIntegerField(choices=ACTION_CHOICES)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.message[:50]
-    
+
+    def formated_create_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)    
+
     class Meta:
         verbose_name = 'Log'
         verbose_name_plural = 'Logs'
@@ -93,10 +115,15 @@ class Log(models.Model):
 class Controller(models.Model):
     is_finished = models.BooleanField(default=True)
     is_stopped = models.BooleanField(default=False)
+    updated_at=models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Finished - {self.is_finished}; Stopped - {self.is_stopped}"
     
+    def formated_update_date(self):
+        total_seconds = round((timezone.now() - self.updated_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+
     class Meta:
         verbose_name = "Controller"
         verbose_name_plural = "Controllers"
@@ -105,9 +132,15 @@ class Controller(models.Model):
 class APIKey(models.Model):
     username = models.CharField(max_length=255)
     api_key = models.CharField(max_length=255)
+    active = models.BooleanField(default=True)
+    checked_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.username} | {self.api_key}"
+
+    def formated_checked_date(self):
+        total_seconds = round((timezone.now() - self.checked_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
 
     class Meta:
         verbose_name = "API Key"

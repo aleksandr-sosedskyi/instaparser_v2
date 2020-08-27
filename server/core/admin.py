@@ -2,30 +2,33 @@ from django.contrib import admin
 from django.shortcuts import redirect
 
 from core.models import InstaUser, Process, Log, Controller, APIKey
+from core.utils import format_date_from_seconds
+from core.tasks import check_api_keys_task
 
 from admin_actions.admin import ActionsModelAdmin
 
 
 @admin.register(InstaUser)
 class InstaUserAdmin(admin.ModelAdmin):
-    list_display = ('username', 'email', 'phone', 'subscribers')
+    list_display = ('username', 'email', 'phone', 'subscribers', 'formated_update_date')
     list_filter = ('status', 'is_processed')
+
 
 
 @admin.register(Process)
 class ProcessAdmin(admin.ModelAdmin):
-    list_display = ('user', 'count', 'created_at', 'updated_at')
+    list_display = ('user', 'count', 'formated_create_date', 'formated_update_date')
     list_display_links = ('user',)
 
 
 @admin.register(Log)
 class LogAdmin(admin.ModelAdmin):
-    list_display = ('tid', '__str__', 'action', 'created_at')
+    list_display = ('tid', 'api_key', '__str__', 'action', 'formated_create_date')
 
 
 @admin.register(Controller)
 class ControllerAdmin(ActionsModelAdmin):
-    list_display = ('is_finished', 'is_stopped')
+    list_display = ('is_finished', 'is_stopped', 'formated_update_date')
     actions_row = ('stop_parse', 'resume_parse')
     
     def stop_parse(self, request, pk):
@@ -51,4 +54,10 @@ class ControllerAdmin(ActionsModelAdmin):
 
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
-    list_display = ('username', 'api_key')
+    list_display = ('username', 'api_key', 'formated_checked_date', 'active')
+    actions = ('check_api_keys',)
+
+    def check_api_keys(self, request, queryset):
+        for pk in queryset.values_list('pk', flat=True):
+            check_api_keys_task.delay(pk)
+    check_api_keys.short_description = 'Check API keys'
