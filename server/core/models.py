@@ -1,4 +1,7 @@
 from django.db import models
+from django.db.models import Q, Sum
+from django.views.decorators.cache import never_cache
+
 from django.utils import timezone
 
 from core.utils import format_date_from_seconds
@@ -30,7 +33,8 @@ class InstaUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     tid = models.CharField(max_length=20)
-
+    api_key = models.CharField(max_length=55)
+    
     # Process attributes
     is_processed = models.BooleanField(default=False)
     is_scrapping = models.BooleanField(default=False)
@@ -43,6 +47,28 @@ class InstaUser(models.Model):
             is_scrapping=False,
             is_invalid_process=False
         )
+
+    @staticmethod
+    def get_percent_email():
+        all_users = InstaUser.objects.all().count()
+        email_users = InstaUser.objects.filter(~Q(email=None)).count()
+        return round(email_users / all_users * 100, 3)
+
+    @staticmethod
+    def get_percent_valid_email():
+        all_users = InstaUser.objects.all().count()
+        valid_email_users = InstaUser.objects.filter(status=InstaUser.RIGHT_EMAIL).count()
+        return round(valid_email_users / all_users * 100, 3)
+
+    @staticmethod
+    def get_percent_hacked():
+        all_users = InstaUser.objects.all().count()
+        hacked_users = InstaUser.objects.filter(status=InstaUser.HACKED).count()
+        return round(hacked_users / all_users * 100, 3)
+
+    def formated_created_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
 
     def formated_update_date(self):
         total_seconds = round((timezone.now() - self.updated_at).total_seconds())
@@ -145,3 +171,27 @@ class APIKey(models.Model):
     class Meta:
         verbose_name = "API Key"
         verbose_name_plural = "API Keys"
+
+
+class SpeedLog(models.Model):
+    count = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"self.count "
+
+    def formated_created_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+
+    @staticmethod
+    def calculate_speed():
+        current_datetime = timezone.now()
+        last_datetime = current_datetime.replace(hour=current_datetime.hour-1)
+        total_count = SpeedLog.objects.filter(created_at__range=(last_datetime, current_datetime)).aggregate(Sum('count')).get('count__sum')
+        return f"{total_count} per hour"
+
+    class Meta:
+        verbose_name = 'Speed Log'
+        verbose_name_plural = 'Speed Logs'
+        ordering = ('-created_at',)

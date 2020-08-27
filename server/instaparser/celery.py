@@ -1,6 +1,7 @@
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'instaparser.settings.dev')
@@ -22,6 +23,10 @@ app.conf.beat_schedule = {
         'schedule': 300.0,
         'args': ()
     },
+    'check_api_keys': {
+        'task': 'core.tasks.check_api_keys',
+        'schedule': crontab(minute='0', hour='4')
+    }
 }
 
 @app.task(bind=True)

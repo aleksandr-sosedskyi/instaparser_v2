@@ -8,7 +8,7 @@ from celery.utils.log import get_task_logger
 
 from django.conf import settings
 
-from core.models import InstaUser, Process, Log, Controller, APIKey
+from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog
 from core.utils import parse_user_data
 
 
@@ -52,7 +52,8 @@ def process_completed_task(task):
                     'email':user[6] if user[6] and user[6] != "0" else None,
                     'city':user[7] if user[7] and user[7] != "0" else None,
                     'status':status,
-                    'tid': task.tid
+                    'tid': task.tid,
+                    'api_key': task.api_key
                 }
             )
             if not created:
@@ -60,17 +61,19 @@ def process_completed_task(task):
                 obj.subscribers = int(user[2])
                 obj.subscriptions = int(user[3])
                 obj.name = user[4] if user[4] and user[4] != "0" else obj.name 
-                obj.phone = user[5] if user[5] and user[4] != "0" else obj.phone 
+                obj.phone = user[5] if user[5] and user[5] != "0" else obj.phone 
                 obj.email = user[6] if user[6] and user[6] != "0" else obj.email 
                 obj.city = user[7] if user[7] and user[7] != "0" else obj.city 
                 obj.status = InstaUser.RIGHT_EMAIL if obj.email and ('rambler' in obj.email or 'yandex' in obj.email) else obj.status
                 obj.tid = task.tid
+                obj.api_key = task.api_key
                 obj.save()
     else:
         raise InvalidResponseException(response.status_code, response.text)
     user = task.user
     user.is_processed = True
     user.save()
+    SpeedLog.objects.create(count=task.count)
     task.delete()
 
 
@@ -100,11 +103,14 @@ def parse():
                         task.delete()
                         tasks_count -= 1
                     elif data['tid_status'] == 'completed':
+                        task.count = data['count']
+                        task.save()
                         try:
                             if data['count'] == 0 and task.user.subscribers != 0:
                                 user = task.user
                                 user.is_scrapping = False
                                 user.save()
+                                SpeedLog.objects.create(count=task.count)
                                 task.delete()
                             else:
                                 process_completed_task(task)
