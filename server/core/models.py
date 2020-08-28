@@ -40,30 +40,26 @@ class InstaUser(models.Model):
     is_scrapping = models.BooleanField(default=False)
     is_invalid_process = models.BooleanField(default=False)
 
-    @staticmethod
-    def get_users_to_parse():
-        return InstaUser.objects.filter(
+    def get_users_to_parse(self):
+        return self.__class__.objects.filter(
             is_processed=False,
             is_scrapping=False,
             is_invalid_process=False
         )
 
-    @staticmethod
-    def get_percent_email():
-        all_users = InstaUser.objects.all().count()
-        email_users = InstaUser.objects.filter(~Q(email=None)).count()
+    def get_percent_email(self):
+        all_users = self.__class__.objects.all().count()
+        email_users = self.__class__.objects.filter(~Q(email=None)).count()
         return round(email_users / all_users * 100, 3)
 
-    @staticmethod
-    def get_percent_valid_email():
-        all_users = InstaUser.objects.all().count()
-        valid_email_users = InstaUser.objects.filter(status=InstaUser.RIGHT_EMAIL).count()
+    def get_percent_valid_email(self):
+        all_users = self.__class__.objects.all().count()
+        valid_email_users = self.__class__.objects.filter(status=self.__class__.RIGHT_EMAIL).count()
         return round(valid_email_users / all_users * 100, 3)
 
-    @staticmethod
-    def get_percent_hacked():
-        all_users = InstaUser.objects.all().count()
-        hacked_users = InstaUser.objects.filter(status=InstaUser.HACKED).count()
+    def get_percent_hacked(self):
+        all_users = self.__class__.objects.all().count()
+        hacked_users = self.__class__.objects.filter(status=self.__class__.HACKED).count()
         return round(hacked_users / all_users * 100, 3)
 
     def formated_created_date(self):
@@ -184,11 +180,10 @@ class SpeedLog(models.Model):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
 
-    @staticmethod
-    def calculate_speed():
+    def calculate_speed(self):
         current_datetime = timezone.now()
         last_datetime = current_datetime.replace(hour=current_datetime.hour-1)
-        total_count = SpeedLog.objects.filter(created_at__range=(last_datetime, current_datetime)).aggregate(Sum('count')).get('count__sum')
+        total_count = self.__class__.objects.filter(created_at__range=(last_datetime, current_datetime)).aggregate(Sum('count')).get('count__sum')
         return f"{total_count} per hour"
 
     class Meta:

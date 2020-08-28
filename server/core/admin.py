@@ -84,7 +84,7 @@ class SpeedLogAdmin(admin.ModelAdmin):
     clear_logs.short_description = "Remove old logs"
 
 
-admin.site.site_header = f'Django administration ({InstaUser.get_percent_email()}' \
-    f'--{InstaUser.get_percent_valid_email()}' \
-    f'--{InstaUser.get_percent_hacked()})' \
-    f' {SpeedLog.calculate_speed()}'
+admin.site.site_header = f'Django administration ({InstaUser.objects.first().get_percent_email()}' \
+    f'--{InstaUser.objects.first().get_percent_valid_email()}' \
+    f'--{InstaUser.objects.first().get_percent_hacked()})' \
+    f' {SpeedLog.objects.first().calculate_speed()}'

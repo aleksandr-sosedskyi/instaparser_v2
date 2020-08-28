@@ -126,7 +126,7 @@ def parse():
         
         try:
             for i in range(0, 3-tasks_count):
-                if not (users := InstaUser.get_users_to_parse()).exists():
+                if not (users := InstaUser.objects.first().get_users_to_parse()).exists():
                     break
                 user_to_parse = random.choice(users)
                 response = requests.get(settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={user_to_parse.username}&dop=1,2,3,5,8")
