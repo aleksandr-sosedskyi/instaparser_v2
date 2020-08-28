@@ -1,30 +1,62 @@
 from datetime import timedelta
 
+from django.urls import path
+
 from django.utils import timezone
 from django.contrib import admin
 from django.shortcuts import redirect
 from django.db.models import Q
 
-from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog
-from core.utils import format_date_from_seconds
+from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog, UserHistory
 from core.tasks import check_api_keys_task
 
 from admin_actions.admin import ActionsModelAdmin
 
 
+class UserHistoryAdmin(admin.TabularInline):
+    model = UserHistory
+    list_display = ('__str__', 'email', 'phone', 'city')
+    readonly_fields = ('__str__', 'created_at', 'email', 'phone', 'city')
+    can_delete = False
+    extra = 0
+    
+
 @admin.register(InstaUser)
 class InstaUserAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/insta_user__changelist.html'
     list_display = ('username', 'email', 'phone', 'subscribers', 'city', 'formated_update_date',)
     list_filter = ('status', 'is_processed', 'is_invalid_process')
     fields = ('ig_id', 'username', 'name', 'email', 'phone', 'subscribers', 'subscriptions', 'city',
                 'status', 'tid', 'api_key', 'is_processed', 'is_invalid_process', 'is_scrapping', 'created_at', 'updated_at')
     readonly_fields = ('updated_at', 'created_at')
+    inlines = [
+        UserHistoryAdmin,
+    ]
+    search_fields = ('username', 'email', 'city')
+
+    def get_urls(self):
+        urls = [
+            path('get-info/', self.get_info, name='get_info')
+        ]
+        return urls + super().get_urls()
+    
+    def get_info(self, request):
+        qs = InstaUser.objects.filter(~Q(email=None) | ~Q(phone=None))
+        qs_emails = qs.filter(~Q(email=None))
+        qs_phones = qs.filter(~Q(phone=None))
+        emails_count = qs_emails.count()
+        right_emails_count = qs_emails.filter(status=InstaUser.RIGHT_EMAIL).count()
+        phone_count = qs_phones.count()
+        message = f"Emails: {emails_count}. Right emails: {right_emails_count}. Phones: {phone_count}"
+        self.message_user(request, message)
+        return redirect('admin:core_instauser_changelist')
 
 
 @admin.register(Process)
 class ProcessAdmin(admin.ModelAdmin):
     list_display = ('user', 'count', 'formated_create_date', 'formated_update_date')
     list_display_links = ('user',)
+    readonly_fields = ('user', 'count', 'api_key', 'tid')
 
 
 @admin.register(Log)
@@ -60,31 +92,45 @@ class ControllerAdmin(ActionsModelAdmin):
 
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/api_key__changelist.html'
     list_display = ('username', 'api_key', 'formated_checked_date', 'active')
-    actions = ('check_api_keys',)
 
-    def check_api_keys(self, request, queryset):
-        for pk in queryset.values_list('pk', flat=True):
-            check_api_keys_task.delay(pk)
-    check_api_keys.short_description = 'Check API keys'
+    def get_urls(self):
+        urls = [
+            path('check-api-keys/', self.check_api_keys, name='check_api_keys')
+        ]
+        return urls + super().get_urls()
+
+    def check_api_keys(self, request):
+        for i in APIKey.objects.all():
+            check_api_keys_task.delay(i.pk)
+        message = 'Task is successfully started!'
+        self.message_user(request, message)
+        return redirect('admin:core_apikey_changelist')
 
 
 @admin.register(SpeedLog)
 class SpeedLogAdmin(admin.ModelAdmin):
     list_display = ('count', 'formated_created_date')
-    actions = ('clear_logs',)
+    change_list_template = 'admin/speed_logs__changelist.html'
 
-    def clear_logs(self, request, queryset):
+    def get_urls(self):
+        urls = [
+            path('refresh-speed-logs/', self.clear_logs, name='refresh_speed_logs')
+        ]
+        return urls + super().get_urls()
+
+    def clear_logs(self, request):
         current_datetime = timezone.now()
         last_datetime = current_datetime.replace(hour=current_datetime.hour-1)
         SpeedLog.objects.filter(~Q(created_at__range=(last_datetime, current_datetime))).delete()
         message = 'Old logs have been removed!'
         self.message_user(request, message)
         return redirect("admin:core_speedlog_changelist")
-    clear_logs.short_description = "Remove old logs"
 
 
-admin.site.site_header = f'Django administration ({InstaUser.objects.first().get_percent_email()}' \
-    f'--{InstaUser.objects.first().get_percent_valid_email()}' \
-    f'--{InstaUser.objects.first().get_percent_hacked()})' \
-    f' {SpeedLog.objects.first().calculate_speed()}'
+# Uncomment after migrate
+admin.site.site_header = f'Django administration ({InstaUser.objects.get_percent_email()}' \
+    f'--{InstaUser.objects.get_percent_valid_email()}' \
+    f'--{InstaUser.objects.get_percent_hacked()})' \
+    f' {SpeedLog.objects.calculate_speed()}'

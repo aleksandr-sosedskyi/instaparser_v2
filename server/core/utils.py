@@ -30,7 +30,6 @@ def parse_user_data(s):
                     end_of_string_pattern = r" \d{7,13}:[\w.]*:\d{1,12}:\d{1,12}.+"
                     string = re.search(end_of_string_pattern, s[index+1:])
                     if not string:
-                        print(index)
                         break
                     else:
                         last_split_index = index + 2 + string.start()
@@ -128,4 +127,3 @@ def format_date_from_seconds(total_seconds):
         formated_date = f"{days}d " + formated_date
 
     return formated_date
-

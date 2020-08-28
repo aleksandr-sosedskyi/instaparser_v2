@@ -7,6 +7,35 @@ from django.utils import timezone
 from core.utils import format_date_from_seconds
 
 
+class InstaUserManager(models.Manager):
+    RIGHT_EMAIL = 1
+    HACKABLE = 2
+    HACKED = 3
+    UNHACKABLE = 4
+
+    def get_users_to_parse(self):
+        return self.filter(
+            is_processed=False,
+            is_scrapping=False,
+            is_invalid_process=False
+        )
+    
+    def get_percent_email(self):
+        all_users = self.all().count()
+        email_users = self.filter(~Q(email=None)).count()
+        return round(email_users / all_users * 100, 2)
+    
+    def get_percent_valid_email(self):
+        all_users = self.all().count()
+        valid_email_users = self.filter(status=self.RIGHT_EMAIL).count()
+        return round(valid_email_users / all_users * 100, 2)
+
+    def get_percent_hacked(self):
+        all_users = self.all().count()
+        hacked_users = self.filter(status=self.HACKED).count()
+        return round(hacked_users / all_users * 100, 2)
+
+
 class InstaUser(models.Model):
     RIGHT_EMAIL = 1
     HACKABLE = 2
@@ -40,28 +69,6 @@ class InstaUser(models.Model):
     is_scrapping = models.BooleanField(default=False)
     is_invalid_process = models.BooleanField(default=False)
 
-    def get_users_to_parse(self):
-        return self.__class__.objects.filter(
-            is_processed=False,
-            is_scrapping=False,
-            is_invalid_process=False
-        )
-
-    def get_percent_email(self):
-        all_users = self.__class__.objects.all().count()
-        email_users = self.__class__.objects.filter(~Q(email=None)).count()
-        return round(email_users / all_users * 100, 3)
-
-    def get_percent_valid_email(self):
-        all_users = self.__class__.objects.all().count()
-        valid_email_users = self.__class__.objects.filter(status=self.__class__.RIGHT_EMAIL).count()
-        return round(valid_email_users / all_users * 100, 3)
-
-    def get_percent_hacked(self):
-        all_users = self.__class__.objects.all().count()
-        hacked_users = self.__class__.objects.filter(status=self.__class__.HACKED).count()
-        return round(hacked_users / all_users * 100, 3)
-
     def formated_created_date(self):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
@@ -72,6 +79,8 @@ class InstaUser(models.Model):
 
     def __str__(self):
         return self.username
+
+    objects = InstaUserManager()
 
     class Meta:
         verbose_name = 'Instagram user'
@@ -169,6 +178,14 @@ class APIKey(models.Model):
         verbose_name_plural = "API Keys"
 
 
+class SpeedLogManager(models.Manager):
+    def calculate_speed(self):
+        current_datetime = timezone.now()
+        last_datetime = current_datetime.replace(hour=current_datetime.hour-1)
+        total_count = self.filter(created_at__range=(last_datetime, current_datetime)).aggregate(Sum('count')).get('count__sum')
+        return f"{total_count} per hour"
+
+
 class SpeedLog(models.Model):
     count = models.PositiveIntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -180,13 +197,25 @@ class SpeedLog(models.Model):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
 
-    def calculate_speed(self):
-        current_datetime = timezone.now()
-        last_datetime = current_datetime.replace(hour=current_datetime.hour-1)
-        total_count = self.__class__.objects.filter(created_at__range=(last_datetime, current_datetime)).aggregate(Sum('count')).get('count__sum')
-        return f"{total_count} per hour"
+    objects = SpeedLogManager()
 
     class Meta:
         verbose_name = 'Speed Log'
         verbose_name_plural = 'Speed Logs'
         ordering = ('-created_at',)
+
+
+class UserHistory(models.Model):
+    user = models.ForeignKey(InstaUser, on_delete=models.CASCADE)
+    email = models.CharField(max_length=255)
+    phone = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "User history"
+        verbose_name_plural = "Users history"
+        ordering = ('-created_at',)
+    
+    def __str__(self):
+        return self.user.username 

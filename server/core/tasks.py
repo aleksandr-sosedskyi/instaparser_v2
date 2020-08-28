@@ -4,15 +4,11 @@ import random
 import traceback
 
 from celery import shared_task
-from celery.utils.log import get_task_logger
 
 from django.conf import settings
 
-from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog
+from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog, UserHistory
 from core.utils import parse_user_data
-
-
-logger = get_task_logger(__name__)
 
 
 class InvalidResponseException(Exception):
@@ -28,8 +24,8 @@ def process_completed_task(task):
         if not users_list:
             task.delete()
             return
-        status = InstaUser.UNHACKABLE
         for user in users_list: 
+            status = InstaUser.UNHACKABLE
             if len(user) != 8:
                 raise ValueError(f"User has invalid data - {user}")
             if user[6] == "0":
@@ -57,17 +53,20 @@ def process_completed_task(task):
                 }
             )
             if not created:
-                username = user[1]
-                obj.subscribers = int(user[2])
-                obj.subscriptions = int(user[3])
+                old_phone, old_email, old_city = obj.phone, obj.email, obj.city
+                obj.username = user[1]
+                obj.subscribers = int(user[2]) if user[2] and user[2] != "0" else obj.subscribers
+                obj.subscriptions = int(user[3]) if user[3] and user[3] != "0" else obj.subscriptions
                 obj.name = user[4] if user[4] and user[4] != "0" else obj.name 
                 obj.phone = user[5] if user[5] and user[5] != "0" else obj.phone 
                 obj.email = user[6] if user[6] and user[6] != "0" else obj.email 
                 obj.city = user[7] if user[7] and user[7] != "0" else obj.city 
-                obj.status = InstaUser.RIGHT_EMAIL if obj.email and ('rambler' in obj.email or 'yandex' in obj.email) else obj.status
+                obj.status = InstaUser.RIGHT_EMAIL if obj.email and ('rambler' in obj.email or 'yandex' in obj.email) else InstaUser.UNHACKABLE
                 obj.tid = task.tid
                 obj.api_key = task.api_key
                 obj.save()
+                if [old_phone, old_email, old_city] != [obj.phone, obj.email, obj.city]:
+                    UserHistory.objects.create(user=obj, email=obj.email, phone=obj.phone, city=obj.city)
     else:
         raise InvalidResponseException(response.status_code, response.text)
     user = task.user
@@ -126,7 +125,7 @@ def parse():
         
         try:
             for i in range(0, 3-tasks_count):
-                if not (users := InstaUser.objects.first().get_users_to_parse()).exists():
+                if not (users := InstaUser.objects.get_users_to_parse()).exists():
                     break
                 user_to_parse = random.choice(users)
                 response = requests.get(settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={user_to_parse.username}&dop=1,2,3,5,8")
@@ -157,5 +156,6 @@ def check_api_keys_task(pk):
         obj.active = True
         obj.save()
     else:
+        Process.objects.filter(api_key=obj.api_key).delete()
         obj.active = False
         obj.save()
