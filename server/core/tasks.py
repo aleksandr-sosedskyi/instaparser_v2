@@ -41,8 +41,8 @@ def process_completed_task(task):
                 defaults={
                     'ig_id':user[0],
                     'username':user[1],
-                    'subscribers':int(user[2]) if user[2] and user[2] != "0" else None,
-                    'subscriptions':int(user[3]) if user[3] and user[3] != "0" else None,
+                    'subscribers':int(user[2]) if user[2] else None,
+                    'subscriptions':int(user[3]) if user[3] else None,
                     'name':user[4] if user[4] and user[4] != "0" else None,
                     'phone':user[5] if user[5] and user[5] != "0" else None,
                     'email':user[6] if user[6] and user[6] != "0" else None,
@@ -55,8 +55,8 @@ def process_completed_task(task):
             if not created:
                 old_phone, old_email, old_city = obj.phone, obj.email, obj.city
                 obj.username = user[1]
-                obj.subscribers = int(user[2]) if user[2] and user[2] != "0" else obj.subscribers
-                obj.subscriptions = int(user[3]) if user[3] and user[3] != "0" else obj.subscriptions
+                obj.subscribers = int(user[2]) if user[2]  else obj.subscribers
+                obj.subscriptions = int(user[3]) if user[3] else obj.subscriptions
                 obj.name = user[4] if user[4] and user[4] != "0" else obj.name 
                 obj.phone = user[5] if user[5] and user[5] != "0" else obj.phone 
                 obj.email = user[6] if user[6] and user[6] != "0" else obj.email 

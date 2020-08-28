@@ -69,7 +69,7 @@ class InstaUser(models.Model):
     is_scrapping = models.BooleanField(default=False)
     is_invalid_process = models.BooleanField(default=False)
 
-    def formated_created_date(self):
+    def formated_create_date(self):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
 
@@ -165,11 +165,16 @@ class APIKey(models.Model):
     api_key = models.CharField(max_length=255)
     active = models.BooleanField(default=True)
     checked_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.username} | {self.api_key}"
 
-    def formated_checked_date(self):
+    def formated_check_date(self):
+        total_seconds = round((timezone.now() - self.checked_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+
+    def formated_create_date(self):
         total_seconds = round((timezone.now() - self.checked_at).total_seconds())
         return format_date_from_seconds(total_seconds)
 
@@ -193,7 +198,7 @@ class SpeedLog(models.Model):
     def __str__(self):
         return f"self.count "
 
-    def formated_created_date(self):
+    def formated_create_date(self):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
 
@@ -219,3 +224,7 @@ class UserHistory(models.Model):
     
     def __str__(self):
         return self.user.username 
+
+    def formated_create_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)

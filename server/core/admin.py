@@ -41,13 +41,13 @@ class InstaUserAdmin(admin.ModelAdmin):
         return urls + super().get_urls()
     
     def get_info(self, request):
-        qs = InstaUser.objects.filter(~Q(email=None) | ~Q(phone=None))
+        qs = InstaUser.objects.all()
         qs_emails = qs.filter(~Q(email=None))
         qs_phones = qs.filter(~Q(phone=None))
         emails_count = qs_emails.count()
         right_emails_count = qs_emails.filter(status=InstaUser.RIGHT_EMAIL).count()
         phone_count = qs_phones.count()
-        message = f"Emails: {emails_count}. Right emails: {right_emails_count}. Phones: {phone_count}"
+        message = f"Users: {'{:,}'.format(qs.count())}. Emails: {emails_count}. Right emails: {right_emails_count}. Phones: {phone_count}"
         self.message_user(request, message)
         return redirect('admin:core_instauser_changelist')
 
@@ -56,12 +56,14 @@ class InstaUserAdmin(admin.ModelAdmin):
 class ProcessAdmin(admin.ModelAdmin):
     list_display = ('user', 'count', 'formated_create_date', 'formated_update_date')
     list_display_links = ('user',)
-    readonly_fields = ('user', 'count', 'api_key', 'tid')
+    readonly_fields = ('user',)
 
 
 @admin.register(Log)
 class LogAdmin(admin.ModelAdmin):
     list_display = ('tid', 'api_key', '__str__', 'action', 'formated_create_date')
+    fields = ('message', 'tid', 'api_key', 'action', 'formated_create_date')
+    readonly_fields = ('message', 'tid', 'api_key', 'action', 'formated_create_date')
 
 
 @admin.register(Controller)
@@ -93,7 +95,7 @@ class ControllerAdmin(ActionsModelAdmin):
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
     change_list_template = 'admin/api_key__changelist.html'
-    list_display = ('username', 'api_key', 'formated_checked_date', 'active')
+    list_display = ('username', 'api_key', 'formated_create_date', 'formated_check_date', 'active')
 
     def get_urls(self):
         urls = [
@@ -111,7 +113,10 @@ class APIKeyAdmin(admin.ModelAdmin):
 
 @admin.register(SpeedLog)
 class SpeedLogAdmin(admin.ModelAdmin):
-    list_display = ('count', 'formated_created_date')
+    list_display = ('count', 'formated_create_date')
+    fields = ('count', 'formated_create_date')
+    readonly_fields = ('count', 'formated_create_date')
+
     change_list_template = 'admin/speed_logs__changelist.html'
 
     def get_urls(self):
@@ -127,6 +132,13 @@ class SpeedLogAdmin(admin.ModelAdmin):
         message = 'Old logs have been removed!'
         self.message_user(request, message)
         return redirect("admin:core_speedlog_changelist")
+
+
+@admin.register(UserHistory)
+class UserHistoryAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone', 'email', 'city', 'formated_create_date')
+    list_display_links = ('user',)
+    readonly_fields = ('user',)
 
 
 # Uncomment after migrate
