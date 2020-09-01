@@ -23,10 +23,6 @@ app.conf.beat_schedule = {
         'schedule': 300.0,
         'args': ()
     },
-    'check_api_keys': {
-        'task': 'core.tasks.check_api_keys',
-        'schedule': crontab(minute='0', hour='4')
-    }
 }
 
 @app.task(bind=True)

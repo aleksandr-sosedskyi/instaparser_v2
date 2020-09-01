@@ -12,7 +12,7 @@ class InstaUserManager(models.Manager):
     HACKABLE = 2
     HACKED = 3
     UNHACKABLE = 4
-
+    
     def get_users_to_parse(self):
         return self.filter(
             is_processed=False,
@@ -41,12 +41,14 @@ class InstaUser(models.Model):
     HACKABLE = 2
     HACKED = 3
     UNHACKABLE = 4
+    NOT_INTERESTING = 5
 
     STATUS_CHOICES = (
         (RIGHT_EMAIL, 'Right email'),
         (HACKABLE, 'Hackable'),
         (HACKED, 'Hacked'),
         (UNHACKABLE, 'Unhackable'),
+        (NOT_INTERESTING, 'Not interesting')
     )
 
     # General

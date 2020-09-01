@@ -33,6 +33,14 @@ class InstaUserAdmin(admin.ModelAdmin):
         UserHistoryAdmin,
     ]
     search_fields = ('username', 'email', 'city')
+    actions = ('set_not_interesting',)
+
+    def set_not_interesting(self, request, queryset):
+        queryset.update(status=InstaUser.NOT_INTERESTING)
+        message = 'Selected users have been marked as not interesing!'
+        self.message_user(request, message)
+        return redirect('admin:core_instauser_changelist')
+    set_not_interesting.short_description = 'Mark as not interesting'
 
     def get_urls(self):
         urls = [
