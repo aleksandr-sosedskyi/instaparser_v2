@@ -43,6 +43,7 @@ services:
 
   celery:
     build: server/
+    restart: always
     working_dir: /var/www/server/
     env_file:
       - .env
@@ -53,6 +54,7 @@ services:
 
   celery_beat:
     build: server/
+    restart: always
     working_dir: /var/www/server/
     container_name: insta_celery_beat
     env_file:
@@ -63,6 +65,7 @@ services:
   
   redis:
     image: redis:alpine
+    restart: always
     container_name: insta_redis
     volumes:
       - ./server/:/var/www/server

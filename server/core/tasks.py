@@ -7,7 +7,7 @@ from celery import shared_task
 
 from django.conf import settings
 
-from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog, UserHistory
+from core.models import InstaUser, Process, Log, Controller, APIKey, SpeedLog, UserHistory, Queue
 from core.utils import parse_user_data
 
 
@@ -67,11 +67,19 @@ def process_completed_task(task):
                 obj.save()
                 if [old_phone, old_email, old_city] != [obj.phone, obj.email, obj.city]:
                     UserHistory.objects.create(user=obj, email=obj.email, phone=obj.phone, city=obj.city)
+            if task.queue and task.queue.parse_friends:
+                Queue.objects.create(
+                    username=obj.username,
+                )
     else:
         raise InvalidResponseException(response.status_code, response.text)
-    user = task.user
-    user.is_processed = True
-    user.save()
+    if task.user:
+        user = task.user
+        user.is_processed = True
+        user.save()
+    else:
+        queue = task.queue
+        queue.delete()
     SpeedLog.objects.create(count=task.count)
     task.delete()
 
@@ -95,17 +103,18 @@ def parse():
                         task.count = data['count']
                         task.save()
                     elif data['tid_status'] == 'error':
-                        user = task.user
-                        user.is_invalid_process = True
-                        user.is_scrapping = False
-                        user.save()
+                        if task.user:
+                            user = task.user
+                            user.is_invalid_process = True
+                            user.is_scrapping = False
+                            user.save()
                         task.delete()
                         tasks_count -= 1
                     elif data['tid_status'] == 'completed':
                         task.count = data['count']
                         task.save()
                         try:
-                            if data['count'] == 0 and task.user.subscribers != 0:
+                            if data['count'] == 0 and task.user and task.user.subscribers != 0:
                                 user = task.user
                                 user.is_scrapping = False
                                 user.save()
@@ -124,6 +133,22 @@ def parse():
                 Log.objects.create(message=message, api_key=api_key, tid=task.tid, action=Log.CHECK_API)
         
         try:
+            for i in range(0, 3-tasks_count):
+                if not (users := Queue.objects.filter(in_process=False)).exists():
+                    break
+                queue_to_parse = users.first()
+                response = requests.get(settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={queue_to_parse.username}&dop=1,2,3,5,8")
+                if response.status_code == 200 and (data := response.json()).get('status') == 'ok':
+                    Process.objects.create(
+                        queue=queue_to_parse,
+                        tid=data['tid'],
+                        api_key=api_key,
+                    )
+                    tasks_count += 1
+                else:
+                    raise InvalidResponseException(response.status_code, response.text)
+                queue_to_parse.in_process = True
+                queue_to_parse.save()
             for i in range(0, 3-tasks_count):
                 if not (users := InstaUser.objects.get_users_to_parse()).exists():
                     break

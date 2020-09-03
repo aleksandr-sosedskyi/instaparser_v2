@@ -1,3 +1,5 @@
+import random
+
 from django.db import models
 from django.db.models import Q, Sum
 from django.views.decorators.cache import never_cache
@@ -51,6 +53,12 @@ class InstaUser(models.Model):
         (NOT_INTERESTING, 'Not interesting')
     )
 
+    GROUP_CHOICES = (
+        (1, '1'),
+        (2, '2'),
+        (3, '3')
+    )
+
     # General
     ig_id = models.CharField(primary_key=True, max_length=50)
     username = models.CharField(max_length=55)
@@ -65,7 +73,8 @@ class InstaUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     tid = models.CharField(max_length=20)
     api_key = models.CharField(max_length=55)
-    
+    group = models.PositiveSmallIntegerField(choices=GROUP_CHOICES, default=random.choice([1,2,3]))
+
     # Process attributes
     is_processed = models.BooleanField(default=False)
     is_scrapping = models.BooleanField(default=False)
@@ -91,7 +100,8 @@ class InstaUser(models.Model):
 
 
 class Process(models.Model):
-    user = models.ForeignKey(InstaUser, on_delete=models.CASCADE)
+    user = models.ForeignKey(InstaUser, on_delete=models.CASCADE, null=True)
+    queue = models.ForeignKey('core.Queue', on_delete=models.CASCADE, null=True)
     tid = models.PositiveIntegerField()
     api_key = models.CharField(max_length=100)
     count = models.PositiveIntegerField(default=0)
@@ -99,7 +109,10 @@ class Process(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username} ({self.count})"
+        if self.user:
+            return f"{self.user.username}"
+        else:
+            return f"{self.queue.username}"
 
     def formated_update_date(self):
         total_seconds = round((timezone.now() - self.updated_at).total_seconds())
@@ -214,9 +227,9 @@ class SpeedLog(models.Model):
 
 class UserHistory(models.Model):
     user = models.ForeignKey(InstaUser, on_delete=models.CASCADE)
-    email = models.CharField(max_length=255)
-    phone = models.CharField(max_length=255)
-    city = models.CharField(max_length=255)
+    email = models.CharField(max_length=255, null=True)
+    phone = models.CharField(max_length=255, null=True)
+    city = models.CharField(max_length=255, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -230,3 +243,33 @@ class UserHistory(models.Model):
     def formated_create_date(self):
         total_seconds = round((timezone.now() - self.created_at).total_seconds())
         return format_date_from_seconds(total_seconds)
+
+
+class Queue(models.Model):
+    username = models.CharField(max_length=255)
+    in_process = models.BooleanField(default=False)
+    parse_friends = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Queue'
+        verbose_name_plural = 'Queue'
+        ordering = ('created_at',)
+
+    def formated_create_date(self):
+        total_seconds = round((timezone.now() - self.created_at).total_seconds())
+        return format_date_from_seconds(total_seconds)
+        
+    def __str__(self):
+        return self.username
+
+
+class BlackListWords(models.Model):
+    word = models.CharField(max_length=50)
+
+    class Meta:
+        verbose_name = 'Black List word'
+        verbose_name_plural = 'Black List words'
+
+    def __str__(self):
+        return self.word
