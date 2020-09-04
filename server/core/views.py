@@ -14,6 +14,9 @@ class ListUsersPaginator(PageNumberPagination):
 
     
 class ListUsers(APIView):
+    permission_classes = ()
+    authentication_classes = ()
+    
     def get(self, request, format=None):
         user_status = request.GET.get('status')
         qs = InstaUser.objects.filter(status=user_status)
