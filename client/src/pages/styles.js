@@ -2,7 +2,7 @@ import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles({
     header:{
-        backgroundColor: "#417690",
+        backgroundColor: "#333",
         height: "70px",
         '& h5': {
             color: "#fafafa",
@@ -14,7 +14,7 @@ const useStyles = makeStyles({
     },
     tabsDiv: {
         height: "35px",
-        backgroundColor: "#79aec8",
+        backgroundColor: "#777",
         display: "flex",
         justifyContent: "space-around",
         borderTop: "1px solid #fafafa",
