@@ -159,6 +159,7 @@ class BlackListWordsAdmin(admin.ModelAdmin):
 
 @admin.register(Queue)
 class QueueAdmin(admin.ModelAdmin):
+    search_fields = ('username',)
     list_display = ('username', 'parse_friends', 'formated_create_date')
 
     
@@ -167,4 +168,4 @@ admin.site.site_header = f'Django administration ({InstaUser.objects.get_percent
     f'--{InstaUser.objects.get_percent_valid_email()}' \
     f'--{InstaUser.objects.get_percent_hacked()})' \
     f' {SpeedLog.objects.calculate_speed()}.' \
-    f' {Queue.objects.all().count()}'
+    f' {Queue.objects.all().count()}/{Queue.objects.filter(parse_friends=True).count()}'

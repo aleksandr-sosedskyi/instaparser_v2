@@ -137,24 +137,28 @@ def parse():
                 if not (users := Queue.objects.filter(in_process=False)).exists():
                     break
                 queue_to_parse = users.first()
-                response = requests.get(settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={queue_to_parse.username}&dop=1,2,3,5,8")
-                if response.status_code == 200 and (data := response.json()).get('status') == 'ok':
+                url = settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={queue_to_parse.username}&dop=1,2,3,5,8"
+                response = requests.get(url)
+                if response.status_code == 200 and (data := response.json()).get('status') == 'ok' and data.get('tid') != 'nolinks':
                     Process.objects.create(
                         queue=queue_to_parse,
                         tid=data['tid'],
                         api_key=api_key,
                     )
                     tasks_count += 1
+                    queue_to_parse.in_process = True
+                    queue_to_parse.save()
                 else:
-                    raise InvalidResponseException(response.status_code, response.text)
-                queue_to_parse.in_process = True
-                queue_to_parse.save()
+                    queue_to_parse.delete()
+                    raise InvalidResponseException(response.status_code, f"{response.text}\n{url}")
+                
             for i in range(0, 3-tasks_count):
                 if not (users := InstaUser.objects.get_users_to_parse()).exists():
                     break
                 user_to_parse = random.choice(users)
-                response = requests.get(settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={user_to_parse.username}&dop=1,2,3,5,8")
-                if response.status_code == 200 and (data := response.json()).get('status') == 'ok':
+                url = settings.API_URL + f"?key={api_key}&mode=create&type=p1&act=1&spec=1,2&limit=10000&web=1&links={user_to_parse.username}&dop=1,2,3,5,8"
+                response = requests.get(url)
+                if response.status_code == 200 and (data := response.json()).get('status') == 'ok' and data.get('tid') != 'nolinks':
                     Process.objects.create(
                         user=user_to_parse,
                         tid=data['tid'],
@@ -165,10 +169,10 @@ def parse():
                 else:
                     user_to_parse.is_invalid_process = True
                     user_to_parse.save()
-                    raise InvalidResponseException(response.status_code, response.text)
+                    raise InvalidResponseException(response.status_code, f"{response.text}\n{url}")
         except Exception as e:
             message = traceback.format_exc()
-            Log.objects.create(message=message, api_key=api_key, action=Log.CREATE_TASK)
+            Log.objects.create(message=f"{message}\n{url}", api_key=api_key, action=Log.CREATE_TASK)
     controller.is_finished = True
     controller.save()
 

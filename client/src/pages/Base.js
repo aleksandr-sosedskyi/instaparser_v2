@@ -3,13 +3,13 @@ import useStyles from './styles';
 import MaterialTable from 'material-table';
 import { Link } from "react-router-dom";
 import { HOME } from "../constants/routes";
-import { TablePagination } from '@material-ui/core';
 import { connect } from "react-redux";
-import { getHackableUsers, changeUserStatus } from '../store/actions/users';
-import { HACKABLE, UNHACKABLE } from "../constants/general";
+import { getHackableUsers, changeUserStatus, getUsersWithSecret } from '../store/actions/users';
+import { HACKABLE, UNHACKABLE, HACKED } from "../constants/general";
 
 
 const Base = (props) => {
+
     const getUsersState = (data) => {
         return {
             columns: [
@@ -18,24 +18,50 @@ const Base = (props) => {
                     field: 'username' ,
                     render: rowData => <a href={`https://instagram.com/${rowData.username}`} target='_blank'>{rowData.username}</a>
                 },
-                { title: 'E-mail', field: 'email'},
-                { title: 'Subscribers', field: 'subscribers', type: 'numeric' },
-                {title: 'pk', field: 'pk',}
+                { 
+                    title: 'E-mail', 
+                    field: 'email'
+                },
+                { 
+                    title: 'Subscribers', 
+                    field: 'subscribers', 
+                    type: 'numeric' 
+                },
+                {
+                    title: 'pk', 
+                    field: 'pk',
+                }
             ],
             data: data
         }
     }
 
     const classes = useStyles();
-    const [state, setState] = useState(getUsersState(props.users));
+    const [rightEmailUsersState, setRightEmailUsersState] = useState(getUsersState(props.rightEmailUsers));
+    const [usersWithSecretState, setUsersWithSecretState] = useState(getUsersState(props.usersWithSecret));
 
-    if (state.data.length == 0 && props.users.length != 0){
-        setState(getUsersState(props.users));
+    if (rightEmailUsersState.data.length == 0 
+        && props.rightEmailUsers.length != 0 
+        && usersWithSecretState.data.length == 0 
+        && props.usersWithSecret.length != 0
+        ){
+        setRightEmailUsersState(getUsersState(props.rightEmailUsers.users));
+        setUsersWithSecretState(getUsersState(props.usersWithSecret.users))
+    }
+
+    const refreshRightEmailUsers = (pk) => {
+        var new_data = JSON.parse(JSON.stringify(props.rightEmailUsers.users)).filter(user => user.pk != pk);
+        setRightEmailUsersState(getUsersState(new_data));
+    }
+
+    const refreshUsersWithSecret = (pk) => {
+        var new_data = JSON.parse(JSON.stringify(props.usersWithSecret.users)).filter(user => user.pk != pk);
+        setUsersWithSecretState(getUsersState(new_data));
     }
 
     useEffect(() => {
         props.getHackableUsers();
-    }, [props.users.join(',')])
+    }, [props.rightEmailUsers.users.join(',')])
 
     return (
         <>
@@ -51,30 +77,53 @@ const Base = (props) => {
             <div className={classes.mainBlock}>
                 <div className={classes.forHack}>
                     <MaterialTable
-                    title="Editable Example"
-                    columns={state.columns}
-                    data={state.data}
+                    title="Hackable users"
+                    columns={rightEmailUsersState.columns}
+                    data={rightEmailUsersState.data}
                     actions={[
                         {
                             icon: 'done',
                             tooltip: 'Good User',
                             onClick: (event, rowData) => {
-                                changeUserStatus(HACKABLE, rowData.pk)
+                                props.changeUserStatus(HACKABLE, rowData.pk);    
+                                refreshRightEmailUsers(rowData.pk);
                             }
                         },
                         {
                             icon: 'close',
                             tooltip: 'Delete User',
                             onClick: (event, rowData) => {
-                                console.log(event);
-                                console.log(rowData);
+                                props.changeUserStatus(UNHACKABLE, rowData.pk);
+                                refreshRightEmailUsers(rowData.pk)
                             }
                         }
                     ]}
                     />
                 </div>
                 <div className={classes.withSecret}>
-
+                <MaterialTable
+                    title="Users with secret"
+                    columns={usersWithSecretState.columns}
+                    data={usersWithSecretState.data}
+                    actions={[
+                        {
+                            icon: 'done',
+                            tooltip: 'Good User',
+                            onClick: (event, rowData) => {
+                                props.changeUserStatus(HACKED, rowData.pk);    
+                                refreshUsersWithSecret(rowData.pk);
+                            }
+                        },
+                        {
+                            icon: 'close',
+                            tooltip: 'Delete User',
+                            onClick: (event, rowData) => {
+                                props.changeUserStatus(UNHACKABLE, rowData.pk);
+                                refreshUsersWithSecret(rowData.pk)
+                            }
+                        }
+                    ]}
+                    />
                 </div>
             </div>
         </>
@@ -82,13 +131,15 @@ const Base = (props) => {
 }
 
 const mapStateToProps = (state) => ({
-    users: state.hackableUsers.users
+    rightEmailUsers: state.hackableUsers.users,
+    usersWithSecret: state.usersWithSecret.users
 })
 
 export default connect(
     mapStateToProps,
     {
         getHackableUsers,
-        changeUserStatus
+        changeUserStatus,
+        getUsersWithSecret
     }
 )(Base);

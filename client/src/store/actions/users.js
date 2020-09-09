@@ -7,13 +7,14 @@ import {
 
 import {
     GET_HACKABLE_USERS,
-    CHANGE_USER_STATUS
+    CHANGE_USER_STATUS,
+    GET_USERS_WITH_SECRET
 } from './types';
 
 
 export const getHackableUsers = () => dispatch => {
     axios
-        .get(`${API_URL}/users?status=${RIGHT_EMAIL}`)
+        .get(`${API_URL}/right-email-users/`)
         .then(response => {
             dispatch({
                 type: GET_HACKABLE_USERS,
@@ -24,10 +25,31 @@ export const getHackableUsers = () => dispatch => {
 }
 
 export const changeUserStatus = (status, pk) => dispatch => {
-    axios
-        .post(`${API_URL}/users?status=${status}&pk=${pk}`)
+    const body = JSON.stringify({status, pk});
+
+    const config = {
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }
+    axios 
+        .post(`${API_URL}/right-email-users/`, body, config)
         .then(response => {
-            console.log(response);
+            dispatch({
+                type: CHANGE_USER_STATUS,
+                payload: response.data
+            })
         })
         .catch(error => console.log(error))
+}
+
+export const getUsersWithSecret = () => dispatch => {
+    axios
+        .get(`${API_URL}/users-with-secret/`)
+        .then(response => {
+            dispatch({
+                type: GET_USERS_WITH_SECRET,
+                data: response.data
+            })
+        })
 }
