@@ -95,6 +95,7 @@ class ControllerAdmin(ActionsModelAdmin):
     def resume_parse(self, request, pk):
         obj = Controller.objects.get(pk=pk)
         obj.is_stopped = False
+        obj.is_finished = True
         obj.save()
         message = "Parsing has been resumed!"
         self.message_user(request, message)

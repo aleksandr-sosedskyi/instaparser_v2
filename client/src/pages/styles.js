@@ -33,13 +33,17 @@ const useStyles = makeStyles({
     forHack: {
         width: "50vw",
         height: "100%",
-        borderRight: "1px solid #79aec8"
     },
     withSecret: {
         width: "50vw",
         height: "100%"
+    },
+    userEmail: {
+        cursor: 'pointer',
+        '&:hover': {
+            opacity: 0.85
+        }
     }
-
 })
 
 export default useStyles;

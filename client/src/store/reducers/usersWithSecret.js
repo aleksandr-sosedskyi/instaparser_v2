@@ -8,7 +8,7 @@ export default function (state=initialState, action) {
     switch(action.type){
         case GET_USERS_WITH_SECRET: 
             return {
-                users: action.payload.data
+                users: action.payload
             }
         default:
             return {

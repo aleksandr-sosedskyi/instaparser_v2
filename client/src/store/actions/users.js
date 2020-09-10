@@ -49,7 +49,10 @@ export const getUsersWithSecret = () => dispatch => {
         .then(response => {
             dispatch({
                 type: GET_USERS_WITH_SECRET,
-                data: response.data
+                payload: response.data
             })
+        })
+        .catch(error => {
+            console.log(error)
         })
 }

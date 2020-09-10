@@ -20,7 +20,15 @@ const Base = (props) => {
                 },
                 { 
                     title: 'E-mail', 
-                    field: 'email'
+                    field: 'email',
+                    render: rowData => (
+                        <span  
+                        className={classes.userEmail}
+                        onClick={() => {navigator.clipboard.writeText(rowData.email)}}
+                        >
+                            {rowData.email}
+                        </span>
+                    )
                 },
                 { 
                     title: 'Subscribers', 
@@ -40,28 +48,28 @@ const Base = (props) => {
     const [rightEmailUsersState, setRightEmailUsersState] = useState(getUsersState(props.rightEmailUsers));
     const [usersWithSecretState, setUsersWithSecretState] = useState(getUsersState(props.usersWithSecret));
 
-    if (rightEmailUsersState.data.length == 0 
-        && props.rightEmailUsers.length != 0 
-        && usersWithSecretState.data.length == 0 
-        && props.usersWithSecret.length != 0
-        ){
-        setRightEmailUsersState(getUsersState(props.rightEmailUsers.users));
-        setUsersWithSecretState(getUsersState(props.usersWithSecret.users))
+    if (rightEmailUsersState.data.length == 0 && props.rightEmailUsers.length != 0 ){
+        setRightEmailUsersState(getUsersState(props.rightEmailUsers));
+    }
+
+    if (usersWithSecretState.data.length == 0 && props.usersWithSecret.length != 0){
+        setUsersWithSecretState(getUsersState(props.usersWithSecret))
     }
 
     const refreshRightEmailUsers = (pk) => {
-        var new_data = JSON.parse(JSON.stringify(props.rightEmailUsers.users)).filter(user => user.pk != pk);
+        var new_data = JSON.parse(JSON.stringify(props.rightEmailUsers)).filter(user => user.pk != pk);
         setRightEmailUsersState(getUsersState(new_data));
     }
 
     const refreshUsersWithSecret = (pk) => {
-        var new_data = JSON.parse(JSON.stringify(props.usersWithSecret.users)).filter(user => user.pk != pk);
+        var new_data = JSON.parse(JSON.stringify(props.usersWithSecret)).filter(user => user.pk != pk);
         setUsersWithSecretState(getUsersState(new_data));
     }
 
     useEffect(() => {
         props.getHackableUsers();
-    }, [props.rightEmailUsers.users.join(',')])
+        props.getUsersWithSecret();
+    }, [props.rightEmailUsers.join(','), props.usersWithSecret.join(',')])
 
     return (
         <>
